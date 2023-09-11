@@ -1,14 +1,38 @@
 import express, { type Application } from 'express'
 import path from 'path'
+import cors from 'cors'
 
 const app: Application = express()
 const port = process.env.PORT || 5000
 
+// App configurations
+app.use(cors())
+app.use(express.json())
+app.use(express.urlencoded())
+
+const dummyData = [
+    {
+        userId: 1,
+        id: 1,
+        title: 'delectus aut autem',
+        completed: false
+    },
+    {
+        userId: 1,
+        id: 2,
+        title: 'quis ut nam facilis et officia qui',
+        completed: false
+    },
+    {
+        userId: 1,
+        id: 3,
+        title: 'fugiat veniam minus',
+        completed: false
+    }
+]
+
 app.get('/app', (req, res) => {
-    res.json({
-        name: 'om',
-        vill: 'Mahwal'
-    })
+    res.json(dummyData)
 })
 
 app.get('/test', (req, res) => {

@@ -1,18 +1,32 @@
-<script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
   <div>
-    <a href="https://vitejs.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
+    <ul>
+      <li v-for="list in lists" :key="list.id">
+        {{ list.id }} : {{ list.title }}
+      </li>
+    </ul>
   </div>
-  <HelloWorld msg="Vite + Vue" />
 </template>
+
+<script setup lang="ts">
+import { onMounted, ref } from 'vue';
+import Axios from './helpers/axios'
+
+interface Todo {
+  "userId": number
+  "id": number
+  "title": string;
+  "completed": boolean;
+}
+
+const lists = ref<Todo[]>([])
+
+onMounted(async () => {
+  lists.value = (await Axios.get('/app')).data;
+
+  console.log("🚀 ~ file: App.vue:17 ~ onMounted ~ data.value:", lists.value)
+})
+</script>
 
 <style scoped>
 .logo {
