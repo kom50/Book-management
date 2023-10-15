@@ -1,43 +1,50 @@
-import express, { type Application } from 'express'
+import express, { NextFunction, type Application, Response, Request } from 'express'
 import path from 'path'
-import cors from 'cors'
+import connectDb from './src/db/connection'
+import { Db } from 'mongodb'
+import cookieParser from 'cookie-parser'
+
+import dotenv from 'dotenv'
+
+import authRoutes from './src/routes/auth.route'
+
+dotenv.config()
 
 const app: Application = express()
 const port = process.env.PORT || 5000
 
+const API = '/api/v1'
+
 // App configurations
-app.use(cors())
 app.use(express.json())
-app.use(express.urlencoded())
+app.use(cookieParser())
 
-const dummyData = [
-    {
-        userId: 1,
-        id: 1,
-        title: 'delectus aut autem',
-        completed: false
-    },
-    {
-        userId: 1,
-        id: 2,
-        title: 'quis ut nam facilis et officia qui',
-        completed: false
-    },
-    {
-        userId: 1,
-        id: 3,
-        title: 'fugiat veniam minus',
-        completed: false
-    }
-]
+app.disable('x-powered-by')
 
-app.get('/app', (req, res) => {
-    res.json(dummyData)
+const DB_URL = process.env.DB_URL || ''
+const DB_NAME = process.env.DB_NAME || ''
+let db: Db | null = null
+
+connectDb(DB_URL, DB_NAME).then((dbCon) => {
+    db = dbCon
+    app.set('db', db)
+
+    console.log(`Connecting to database at ${DB_URL}/${DB_NAME}`)
+}).catch((er) => {
+    console.log(er)
 })
 
-app.get('/test', (req, res) => {
-    res.send('<h1> Hello from server side </h1>')
+// App config
+app.set('SECRET_KEY', process.env.SECRET_KEY)
+
+app.get(`${API}/users`, async (req, res) => {
+    const users = await db?.collection('users').find().toArray()
+    console.log(users)
+    res.json(users)
 })
+
+// for authentication
+app.use(`${API}/auth`, authRoutes)
 
 // For production
 if (process.env.NODE_ENV === 'production') {
@@ -49,6 +56,14 @@ if (process.env.NODE_ENV === 'production') {
 
     console.log = () => { }
 }
+
+// Error handler middleware
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    console.log('🚀 ~ file: index.ts:55 ~ app.use ~ err:', err)
+    const statusCode = err.statusCode || 500
+    console.error(err.message, err.stack)
+    res.status(statusCode).json({ message: err.message })
+})
 
 // Start server
 app.listen(port, () => console.log(`Server is listening on port ${port}!`))

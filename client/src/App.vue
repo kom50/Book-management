@@ -20,7 +20,7 @@ interface Todo {
 const lists = ref<Todo[]>([])
 
 onMounted(async () => {
-  lists.value = (await Axios.get('/app')).data;
+  lists.value = (await Axios.get('/api/v1/user')).data;
 
   console.log("🚀 ~ file: App.vue:17 ~ onMounted ~ data.value:", lists.value)
 })
