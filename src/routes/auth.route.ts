@@ -1,28 +1,33 @@
-import Router, { Request, Response } from 'express'
-import jwt from 'jsonwebtoken'
+import Router, { NextFunction, Request, Response } from 'express'
 import { signup, signin, signout } from '../controllers/auth.constrollers'
+import { isAuth } from '../middlewares/auth.middleware'
+import { Db, ObjectId } from 'mongodb'
 
 export default Router()
     .use((req: Request, res: Response, next) => {
-        console.log(req.app.locals)
         next()
     })
-    .get('/', (req: Request, res: Response) => {
-        try {
-            const { token } = req.cookies
-            const decoded = jwt.verify(token, req.app.get('SECRET_KEY'))
+    .get('/', isAuth, async (req: Request, res: Response, next: NextFunction) => {
+        const db: Db = req.app.get('db')
 
-            if (!decoded) {
-                return res.status(401).send({ msg: 'You are not logged in', isAuth: false })
-            }
-
-            // Also hanlde refresh token
-
-            // res.cookie('token', token, { maxAge: 3600000, httpOnly: true })
-            return res.status(200).send({ isAuth: true, msg: '' })
-        } catch (err: any) {
-            res.status(401).send({ msg: err.message })
+        const userId = res.locals.userId
+        if (!userId) {
+            return res.status(200).json({ msg: 'User not logged in' })
         }
+
+        const existingUser = await db.collection('users').findOne({ _id: new ObjectId(userId) })
+        if (!existingUser) {
+            return res.status(401).json({
+                msg: 'User token has been tampered'
+            })
+        }
+
+        // Also hanlde refresh token
+        // res.cookie('token', token, { maxAge: 3600000, httpOnly: true })
+
+        return res.status(200).json({
+            user: existingUser
+        })
     })
     .post('/signup', signup)
     .post('/signin', signin)

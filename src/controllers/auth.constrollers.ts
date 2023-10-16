@@ -3,44 +3,36 @@ import { Db } from 'mongodb'
 import jwt from 'jsonwebtoken'
 
 /**
- * The function isAuth() is used to check if a user is authenticated.
- */
-export function isAuth() {
-
-}
-
-/**
  * The login function is used for user authentication.
  */
 export async function signin(req: Request, res: Response) {
     const { username, password } = req.body as { username: string, password: string }
-
-    console.log('🚀 ~ file: auth.constrollers.ts:16 ~ signin ~ user:', username, password)
     const db: Db = req.app.get('db')
+    const errorMsg = 'Invalid email and/or password'
 
     try {
-        const foundUser = await db.collection('users').findOne({ username, password })
-        console.log('🚀 ~ file: auth.constrollers.ts:20 ~ signin ~ user:', foundUser)
-
-        if (!foundUser) {
-            res.status(400).json({
-                msg: 'invalid username and password'
+        const existingUser = await db.collection('users').findOne({ username, password })
+        if (!existingUser) {
+            return res.status(401).json({
+                msg: errorMsg
             })
-            return
         }
 
-        const token = jwt.sign(foundUser, req.app.get('SECRET_KEY'), { algorithm: 'HS256' })
-        console.log('🚀 ~ file: auth.constrollers.ts:31 ~ signin ~ token:', token)
-
+        const token = jwt.sign(existingUser, req.app.get('SECRET_KEY'), {
+            expiresIn: '2m',
+            algorithm: 'HS256'
+        })
         res.cookie('token', token, { maxAge: 3600000, httpOnly: true })
 
         res.status(201).json({
-            login: 'done'
-            // token
+            existingUser,
+            token
         })
     } catch (err) {
-        res.status(500).json({
-            err
+        console.log(err)
+        res.status(401).json({
+            err,
+            smg: 'Unable to login user'
         })
     }
 }
@@ -52,20 +44,27 @@ export function signout(req: Request, res: Response) {
 
 }
 
-export function signup(req: Request, res: Response) {
+export async function signup(req: Request, res: Response) {
     const user = req.body
     const db: Db = req.app.get('db')
 
-    db.collection('users').insertOne(user).then(result => {
-        console.log(result)
+    const existingUser = await db.collection('users').findOne({ email: user.email })
+    if (existingUser) {
+        return res.status(409).json({
+            msg: 'Email is already taken'
+        })
+    }
 
-        res.status(201).json({
-            done: true,
-            ...result
+    db.collection('users').insertOne(user).then(user => {
+        console.log('user', user)
+
+        res.status(200).json({
+            ...user
         })
     }).catch(er => {
         console.error('Error:', er)
         res.status(500).json({
+            msg: 'Unable to register user: ' + er,
             err: er
         })
     })
